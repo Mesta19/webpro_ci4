@@ -56,6 +56,15 @@ $routes->group('', ['namespace' => 'App\Controllers'], function ($routes) {
     $routes->get('buku/edit/(:any)', 'Buku::edit/$1');
     $routes->post('buku/update',    'Buku::update');
     $routes->get('buku/delete/(:any)','Buku::delete/$1');
-
-    // ... (routes untuk kategori dan rak Anda)
 });
+
+// routes peminjaman
+$routes->get('/admin/data-transaksi-peminjaman', 'Admin::data_transaksi_peminjaman');
+$routes->get('/admin/peminjaman-step-1', 'Admin::peminjaman_step1');
+$routes->get('/admin/tes-qr', 'Admin::tes_qr');
+$routes->get('/admin/peminjaman-step-2', 'Admin::peminjaman_step2');
+$routes->post('/admin/peminjaman-step-2', 'Admin::peminjaman_step2');
+$routes->get('/admin/simpan-temp-pinjam/(:alphanum)', 'Admin::simpan_temp_pinjam/$1');
+$routes->get('admin/simpan-temp-_pinjam/(:segment)', 'Admin::simpan_temp_pinjam/$1');
+$routes->get('/admin/hapus-temp/(:alphanum)', 'Admin::hapus_peminjaman/$1');
+$routes->get('/admin/simpan-transaksi-peminjaman', 'Admin::simpan_transaksi_peminjaman');

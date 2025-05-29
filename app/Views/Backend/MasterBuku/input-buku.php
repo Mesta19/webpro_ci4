@@ -85,7 +85,7 @@
 
                         <div class="form-group col-md-6">
                             <button type="submit" class="btn btn-primary">Simpan</button>
-                            <button type="reset" class="btn btn-danger">Batal</button>
+                            <button type="reset" class="btn btn-danger" id="btnBatal">Batal</button>
                         </div>
                         <div style="clear:both;"></div>
                     </form>
@@ -93,5 +93,15 @@
             </div>
         </div>
     </div>
+document.addEventListener('DOMContentLoaded', function() {
+    const btnBatal = document.getElementById('btnBatal');
+    const urlTujuan = '<?php echo base_url('buku'); ?>'; // Ganti dengan URL yang diinginkan
 
+    if (btnBatal) {
+        btnBatal.addEventListener('click', function(event) {
+            event.preventDefault();
+            window.location.href = urlTujuan;
+        });
+    }
+});
 </div>

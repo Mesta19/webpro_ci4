@@ -75,4 +75,17 @@ class M_Buku extends Model
         return 'BUK001';
     }
 }
+
+// Di dalam file M_Buku.php
+
+public function getDataBukuJoin()
+{
+    $builder = $this->db->table('tbl_buku'); // atau $this->table jika sudah didefinisikan
+    $builder->select('tbl_buku.*, tbl_kategori.nama_kategori, tbl_rak.nama_rak'); // TAMBAHKAN tbl_rak.nama_rak
+    $builder->join('tbl_kategori', 'tbl_kategori.id_kategori = tbl_buku.id_kategori', 'left'); // Join ke kategori
+    $builder->join('tbl_rak', 'tbl_rak.id_rak = tbl_buku.id_rak', 'left'); // TAMBAHKAN JOIN KE tbl_rak
+    $builder->where('tbl_buku.is_delete_buku', '0'); // Tambahkan ini jika Anda hanya ingin buku yang belum dihapus
+    $builder->orderBy('tbl_buku.judul_buku', 'ASC'); // Opsional, untuk mengurutkan
+    return $builder->get();
+}
 }
