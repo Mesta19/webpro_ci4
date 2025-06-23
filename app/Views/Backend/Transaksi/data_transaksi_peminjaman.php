@@ -50,6 +50,7 @@
                             <th data-field="total_pinjam" data-sortable="true" data-align="center">Total Buku Yang Dipinjam</th>
                             <th data-field="status_transaksi" data-sortable="true" data-align="center">Status Transaksi</th>
                             <th data-field="status_ambil_buku" data-sortable="true" data-align="center">Status Ambil Buku</th>
+                            <th data-field="tgl_pengembalian" data-sortable="true">Tanggal Pengembalian</th>
                             <th data-field="opsi" data-align="center">Opsi</th>
                         </tr>
                         </thead>
@@ -68,9 +69,9 @@
                                             $statusClass = 'label-warning';
                                         } elseif ($trx['status_transaksi'] == 'Selesai') {
                                             $statusClass = 'label-success';
-                                        } elseif ($trx['status_transaksi'] == 'Terlambat') { // Anda mungkin punya status ini
+                                        } elseif ($trx['status_transaksi'] == 'Terlambat') {
                                             $statusClass = 'label-danger';
-                                        } elseif ($trx['status_transaksi'] == 'Dibatalkan') { // Atau status lain
+                                        } elseif ($trx['status_transaksi'] == 'Dibatalkan') {
                                             $statusClass = 'label-info';
                                         }
                                         ?>
@@ -88,6 +89,20 @@
                                         <span class="label <?= $statusAmbilClass; ?>"><?= esc($trx['status_ambil_buku']); ?></span>
                                     </td>
                                     <td align="center">
+                                        <?php
+                                        // Ambil tanggal pengembalian aktual dari tbl_pengembalian
+                                        $tglPengembalian = null;
+                                        if (isset($trx['no_peminjaman'])) {
+                                            $db = \Config\Database::connect();
+                                            $rowPengembalian = $db->table('tbl_pengembalian')->where('no_peminjaman', $trx['no_peminjaman'])->get()->getRowArray();
+                                            if ($rowPengembalian && isset($rowPengembalian['tgl_pengembalian']) && $rowPengembalian['tgl_pengembalian'] !== '0000-00-00') {
+                                                $tglPengembalian = $rowPengembalian['tgl_pengembalian'];
+                                            }
+                                        }
+                                        echo $tglPengembalian ? esc($tglPengembalian) : '<span class="text-muted">NULL</span>';
+                                        ?>
+                                    </td>
+                                    <td align="center">
                                         <a href="<?= base_url('admin/detail-transaksi-peminjaman/' . esc($trx['no_peminjaman'], 'url')); ?>" class="btn btn-primary btn-xs" title="Lihat Detail">
                                             <span class="glyphicon glyphicon-info-sign"></span> Lihat Detail
                                         </a>
@@ -101,7 +116,7 @@
                             <?php endforeach; ?>
                         <?php else: ?>
                             <tr>
-                                <td colspan="7" class="text-center">Tidak ada data transaksi peminjaman.</td>
+                                <td colspan="8" class="text-center">Tidak ada data transaksi peminjaman.</td>
                             </tr>
                         <?php endif; ?>
                         </tbody>

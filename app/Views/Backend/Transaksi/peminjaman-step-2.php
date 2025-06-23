@@ -58,8 +58,26 @@ Hapus</button></a>
 <?php
 if($jumlahTemp > 0){
 ?>
-<br /><a href="<?= base_url('admin/simpan-transaksi-peminjaman');?>"><button class="btn
-btn-primary btn-block">Simpan Transaksi Peminjaman Buku</button></a>
+<form id="formMaksimalHari" action="<?= base_url('admin/simpan-transaksi-peminjaman');?>" method="get">
+    <div class="form-group">
+        <label>Pilih Hari Maksimal Peminjaman:</label><br>
+        <button type="button" class="btn btn-info pilih-hari" data-hari="3">3 Hari</button>
+        <button type="button" class="btn btn-info pilih-hari" data-hari="7">7 Hari</button>
+        <button type="button" class="btn btn-info pilih-hari" data-hari="14">14 Hari</button>
+        <input type="hidden" name="maksimal_hari" id="maksimal_hari" value="7">
+        <span id="info-maksimal-hari" style="margin-left:10px;color:#337ab7;font-weight:bold;">Pilih hari pengembalian</span>
+    </div>
+    <button type="submit" class="btn btn-primary btn-block">Simpan Transaksi Peminjaman Buku</button>
+</form>
+<script>
+document.querySelectorAll('.pilih-hari').forEach(function(btn){
+    btn.addEventListener('click', function(){
+        var hari = this.getAttribute('data-hari');
+        document.getElementById('maksimal_hari').value = hari;
+        document.getElementById('info-maksimal-hari').innerText = 'Maksimal ' + hari + ' Hari';
+    });
+});
+</script>
 <?php } ?>
 </div>
 </div>
@@ -111,8 +129,7 @@ target="_blank"><?php echo $data['e_book'];?></a></td>
 <?php
 if($data['jumlah_eksemplar']!="0"){
 ?>
-<a href="<?= base_url('admin/simpan-temp-
-pinjam')."/".sha1($data['id_buku']);?>"><button type="button" class="btn btn-primary">Pinjam
+<a href="<?= base_url('admin/simpan-temp-pinjam')."/".sha1($data['id_buku']);?>"><button type="button" class="btn btn-primary">Pinjam
 Buku</button></a>
 <?php } else echo "#"; ?>
 </td>

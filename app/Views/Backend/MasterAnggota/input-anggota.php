@@ -28,13 +28,13 @@
 
            <div class="form-group col-md-6">
              <label>Nomor Telepon</label>
-             <input type="tel" class="form-control" name="no_tlp" placeholder="Masukkan Nomor telepon Anggota" required="required">
+             <input type="text" class="form-control" name="no_tlp" id="no_tlp" placeholder="Masukkan Nomor telepon Anggota" required="required" oninput="this.value = this.value.replace(/[^0-9]/g, '')">
            </div>
            <div style="clear:both;"></div>
 
            <div class="form-group col-md-6">
              <label>Email Anggota</label>
-             <input type="text" class="form-control" name="email" placeholder="Masukkan Email Anggota" required="required">
+             <input type="email" class="form-control" name="email" placeholder="Masukkan Email Anggota" required="required" oninvalid="this.setCustomValidity('Email harus mengandung @ dan format valid!')" oninput="setCustomValidity('')">
            </div>
            <div style="clear:both;"></div>
            <div class="form-group col-md-6">
@@ -64,3 +64,17 @@
 </div>
 
 </div>
+<script>
+// Jika ingin mencegah paste karakter non-angka juga:
+document.addEventListener('DOMContentLoaded', function() {
+  var noTlp = document.getElementById('no_tlp');
+  if(noTlp) {
+    noTlp.addEventListener('paste', function(e) {
+      var paste = (e.clipboardData || window.clipboardData).getData('text');
+      if(/\D/.test(paste)) {
+        e.preventDefault();
+      }
+    });
+  }
+});
+</script>

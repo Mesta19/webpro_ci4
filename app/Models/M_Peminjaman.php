@@ -100,5 +100,15 @@ public function hapusDataTemp($where)
 $builder = $this->db->table($this->tableTmp);
 return $builder->delete($where);
 }
+public function getDataDetail($where = false)
+{
+    $builder = $this->db->table($this->tableDetail);
+    $builder->select('tbl_detail_peminjaman.*, tbl_buku.judul_buku');
+    $builder->join('tbl_buku', 'tbl_buku.id_buku = tbl_detail_peminjaman.id_buku', 'LEFT');
+    if ($where !== false) {
+        $builder->where($where);
+    }
+    return $builder->get();
+}
 }
 ?>

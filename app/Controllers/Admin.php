@@ -8,6 +8,7 @@ use App\Models\M_Rak;
 use App\Models\M_Anggota;
 use App\Models\M_Buku;
 use App\Models\M_Peminjaman;
+use App\Models\M_Pengembalian;
 
 use Endroid\QrCode\Builder\Builder;
 use Endroid\QrCode\Encoding\Encoding;
@@ -286,10 +287,10 @@ public function peminjaman_step1()
 {
     $uri = service('uri');
     $page = $uri->getSegment(2);
-
+    $modelAnggota = new \App\Models\M_Anggota();
     $data['page'] = $page;
     $data['web_title'] = "Transaksi Peminjaman";
-
+    $data['anggota'] = $modelAnggota->getDataAnggota()->getResultArray();
     echo view('Backend/Template/header', $data);
     echo view('Backend/Template/sidebar', $data);
     echo view('Backend/Transaksi/peminjaman-step-1', $data);
@@ -304,44 +305,56 @@ public function peminjaman_step2()
     $uri = service('uri');
     $page = $uri->getSegment(2);
 
-    if($this->request->getPost('id_anggota')){
-        $idAnggota = $this->request->getPost('id_anggota');
-        session()->set(['idAgt' => $idAnggota]);
-    }
-    else{
+    // Ambil nama_anggota dari POST jika ada
+    if($this->request->getPost('nama_anggota')){
+        $namaAnggota = trim($this->request->getPost('nama_anggota'));
+        // Cari data anggota tanpa case sensitive dan spasi ekstra
+        $builder = $modelAnggota->db->table($modelAnggota->table);
+        $builder->select('*');
+        $builder->where('is_delete_anggota', '0');
+        $builder->where('LOWER(REPLACE(nama_anggota, " ", ""))', str_replace(' ', '', strtolower($namaAnggota)));
+        $dataAnggota = $builder->get()->getRowArray();
+        if($dataAnggota){
+            $idAnggota = $dataAnggota['id_anggota'];
+            session()->set(['idAgt' => $idAnggota]);
+        } else {
+            echo "<html><head><script src='https://cdn.jsdelivr.net/npm/sweetalert2@11'></script>\n<style>\n.swal2-popup { font-family: 'Segoe UI', 'Helvetica Neue', Arial, 'sans-serif'; color: #5f6468; }\n</style></head><body>";
+            echo "<script>Swal.fire({icon: 'error', title: 'Nama anggota tidak ditemukan!', text: 'Pastikan penulisan nama sudah benar dan anggota aktif.'}).then(() => {window.history.back();});</script>";
+            echo "</body></html>";
+            exit;
+        }
+    } else {
         $idAnggota = session()->get('idAgt');
     }
 
     $cekPeminjaman = $modelPeminjaman->getDataPeminjaman(['id_anggota' => $idAnggota, 'status_transaksi' => "Berjalan"])->getNumRows();
     if($cekPeminjaman > 0){
-        session()->setFlashdata('error','Transaksi Tidak Dapat Dilakukan, Masih Ada Transaksi Peminjaman yang Belum Diselesaikan!!');
-        ?>
-        <script>
-            history.go(-1);
-        </script>
-        <?php
+        echo "<html><head><script src='https://cdn.jsdelivr.net/npm/sweetalert2@11'></script>\n<style>\n.swal2-popup { font-family: 'Segoe UI', 'Helvetica Neue', Arial, 'sans-serif'; color: #5f6468; }\n</style></head><body>";
+        echo "<script>Swal.fire({icon: 'warning', title: 'Transaksi Tidak Dapat Dilakukan', text: 'Masih Ada Transaksi Peminjaman yang Belum Diselesaikan!!'}).then(() => {window.history.back();});</script>";
+        echo "</body></html>";
+        exit;
     }
-else{
-    $dataAnggota = $modelAnggota->getDataAnggota(['id_anggota' => $idAnggota])->getRowArray();
-    $dataBuku = $modelBuku->getDataBukuJoin()->getResultArray();
+    else{
+        $dataAnggota = $modelAnggota->getDataAnggota(['id_anggota' => $idAnggota])->getRowArray();
+        $dataBuku = $modelBuku->getDataBukuJoin()->getResultArray();
 
-    $jumlahTemp = $modelPeminjaman->getDataTemp(['id_anggota' => $idAnggota])->getNumRows();
-    $data['jumlahTemp'] = $jumlahTemp;
-    // Mengambil data keseluruhan buku dari table buku di database
+        $jumlahTemp = $modelPeminjaman->getDataTemp(['id_anggota' => $idAnggota])->getNumRows();
+        $data['jumlahTemp'] = $jumlahTemp;
+        // Mengambil data keseluruhan buku dari table buku di database
 
-    $dataTemp = $modelPeminjaman->getDataTempJoin(['tbl_temp_peminjaman.id_anggota' => $idAnggota])->getResultArray();
+        $dataTemp = $modelPeminjaman->getDataTempJoin(['tbl_temp_peminjaman.id_anggota' => $idAnggota])->getResultArray();
 
-    $data['page'] = $page;
-    $data['web_title'] = "Transaksi Peminjaman";
-    $data['dataAnggota'] = $dataAnggota;
-    $data['dataBuku'] = $dataBuku;
-    $data['dataTemp'] = $dataTemp;
+        $data['page'] = $page;
+        $data['web_title'] = "Transaksi Peminjaman";
+        $data['dataAnggota'] = $dataAnggota;
+        $data['dataBuku'] = $dataBuku;
+        $data['dataTemp'] = $dataTemp;
 
-    echo view('Backend/Template/header', $data);
-    echo view('Backend/Template/sidebar', $data);
-    echo view('Backend/Transaksi/peminjaman-step-2', $data);
-    echo view('Backend/Template/footer', $data);
-}
+        echo view('Backend/Template/header', $data);
+        echo view('Backend/Template/sidebar', $data);
+        echo view('Backend/Transaksi/peminjaman-step-2', $data);
+        echo view('Backend/Template/footer', $data);
+    }
 }
 
 public function simpan_temp_pinjam()
@@ -423,7 +436,9 @@ public function simpan_transaksi_peminjaman()
     $modelPeminjaman = new M_Peminjaman;
     $idPeminjaman = date("ymdHis");
     $time_sekarang = time();
-    $kembali = date("Y-m-d", strtotime("+7 days", $time_sekarang));
+    // Ambil maksimal_hari dari GET/POST, default 7 jika tidak ada
+    $maksimal_hari = $this->request->getGet('maksimal_hari') ?? $this->request->getPost('maksimal_hari') ?? 7;
+    $kembali = date("Y-m-d", strtotime("+{$maksimal_hari} days", $time_sekarang));
     $jumlahPinjam = $modelPeminjaman->getDataTemp([
         'id_anggota' => session()->get('idAgt')
     ])->getNumRows();
@@ -444,55 +459,47 @@ public function simpan_transaksi_peminjaman()
         logoResizeToWidth: 50,
         logoPunchoutBackground: true,
         labelText: $labelQR,
-        labelFont: new OpenSans(20), // Menggunakan OpenSans seperti contoh dokumentasi. Jika ingin tetap NotoSans, pastikan class NotoSans ada dan di-import.
+        labelFont: new OpenSans(20),
         labelAlignment: LabelAlignment::Center
     );
 
     $result = $builder->build();
-    
-
     header('Content-Type: ' . $result->getMimeType());
-
     $namaQR = "qr_" . $idPeminjaman . ".png";
     $result->saveToFile(FCPATH . 'Assets/qr_code/' . $namaQR);
-        $dataSimpan = [
-    'no_peminjaman'     => $idPeminjaman,
-    'id_anggota'        => session()->get('idAgt'),
-    'tgl_pinjam'        => date("Y-m-d"),
-    'total_pinjam'      => $jumlahPinjam,
-    'id_admin'          => '-',
-    'status_transaksi'  => "Berjalan",
-    'status_ambil_buku' => "Sudah Diambil"
-];
-
-$modelPeminjaman->saveDataPeminjaman($dataSimpan);
-
-$dataTemp = $modelPeminjaman->getDataTemp([
-    'id_anggota' => session()->get('idAgt')
-])->getResultArray();
-
-foreach ($dataTemp as $sementara) {
-    $simpanDetail = [
-        'no_peminjaman' => $idPeminjaman,
-        'id_buku'       => $sementara['id_buku'],
-        'status_pinjam' => "Sedang Dipinjam",
-        'perpanjangan'  => "2",
-        'tgl_kembali'   => $kembali
+    $dataSimpan = [
+        'no_peminjaman'     => $idPeminjaman,
+        'id_anggota'        => session()->get('idAgt'),
+        'tgl_pinjam'        => date("Y-m-d"),
+        'total_pinjam'      => $jumlahPinjam,
+        'id_admin'          => '-',
+        'status_transaksi'  => "Berjalan",
+        'status_ambil_buku' => "Sudah Diambil"
     ];
-    $modelPeminjaman->saveDataDetail($simpanDetail);
-}
-
-$modelPeminjaman->hapusDataTemp([
-    'id_anggota' => session()->get('idAgt')
-]);
-
-session()->remove('idAgt');
-session()->setFlashdata('success', 'Data Peminjaman Buku Berhasil Disimpan!');
-?>
-<script>
-    document.location = "<?= base_url('admin/data-transaksi-peminjaman'); ?>";
-</script>
-<?php
+    $modelPeminjaman->saveDataPeminjaman($dataSimpan);
+    $dataTemp = $modelPeminjaman->getDataTemp([
+        'id_anggota' => session()->get('idAgt')
+    ])->getResultArray();
+    foreach ($dataTemp as $sementara) {
+        $simpanDetail = [
+            'no_peminjaman' => $idPeminjaman,
+            'id_buku'       => $sementara['id_buku'],
+            'status_pinjam' => "Sedang Dipinjam",
+            'perpanjangan'  => "2",
+            'tgl_kembali'   => $kembali
+        ];
+        $modelPeminjaman->saveDataDetail($simpanDetail);
+    }
+    $modelPeminjaman->hapusDataTemp([
+        'id_anggota' => session()->get('idAgt')
+    ]);
+    session()->remove('idAgt');
+    session()->setFlashdata('success', 'Data Peminjaman Buku Berhasil Disimpan!');
+    ?>
+    <script>
+        document.location = "<?= base_url('admin/data-transaksi-peminjaman'); ?>";
+    </script>
+    <?php
 }
 public function data_transaksi_peminjaman()
 {
@@ -521,5 +528,159 @@ public function data_transaksi_peminjaman()
     echo view('Backend/Transaksi/data_transaksi_peminjaman', $data); 
     echo view('Backend/Template/footer', $data);
 }
+
+public function detail_transaksi_peminjaman($no_peminjaman)
+{
+    $modelPeminjaman = new M_Peminjaman();
+    // Ambil data transaksi utama
+    $dataTransaksi = $modelPeminjaman->getDataPeminjaman(['no_peminjaman' => $no_peminjaman])->getRowArray();
+    // Ambil detail buku yang dipinjam
+    $dataDetail = $modelPeminjaman->getDataDetail(['no_peminjaman' => $no_peminjaman])->getResultArray();
+
+    if (!$dataTransaksi) {
+        session()->setFlashdata('error', 'Data transaksi tidak ditemukan!');
+        return redirect()->to(base_url('admin/data-transaksi-peminjaman'));
+    }
+
+    $data['transaksi'] = $dataTransaksi;
+    $data['detail'] = $dataDetail;
+    $data['web_title'] = 'Detail Transaksi Peminjaman';
+
+    echo view('Backend/Template/header', $data);
+    echo view('Backend/Template/sidebar', $data);
+    echo view('Backend/Transaksi/detail-transaksi-peminjaman', $data);
+    echo view('Backend/Template/footer', $data);
+}
+
+    public function pengembalian_step1()
+    {
+        $uri = service('uri');
+        $page = $uri->getSegment(2);
+        $modelAnggota = new \App\Models\M_Anggota();
+        $data['page'] = $page;
+        $data['web_title'] = "Transaksi Pengembalian";
+        echo view('Backend/Template/header', $data);
+        echo view('Backend/Template/sidebar', $data);
+        echo view('Backend/Transaksi/pengembalian-step-1', $data);
+        echo view('Backend/Template/footer', $data);
+    }
+
+    public function pengembalian_step2()
+    {
+        $modelAnggota = new M_Anggota;
+        $modelPeminjaman = new M_Peminjaman;
+        $modelPengembalian = new M_Pengembalian;
+        $uri = service('uri');
+        $page = $uri->getSegment(2);
+
+        if($this->request->getPost('nama_anggota')){
+            $namaAnggota = trim($this->request->getPost('nama_anggota'));
+            $builder = $modelAnggota->db->table($modelAnggota->table);
+            $builder->select('*');
+            $builder->where('is_delete_anggota', '0');
+            $builder->where('LOWER(REPLACE(nama_anggota, " ", ""))', str_replace(' ', '', strtolower($namaAnggota)));
+            $dataAnggota = $builder->get()->getRowArray();
+            if($dataAnggota){
+                $idAnggota = $dataAnggota['id_anggota'];
+                session()->set(['idAgtKembali' => $idAnggota]);
+            } else {
+                echo "<html><head><script src='https://cdn.jsdelivr.net/npm/sweetalert2@11'></script>\n<style>\n.swal2-popup { font-family: 'Segoe UI', 'Helvetica Neue', Arial, 'sans-serif'; color: #5f6468; }\n</style></head><body>";
+                echo "<script>Swal.fire({icon: 'error', title: 'Nama anggota tidak ditemukan!', text: 'Pastikan penulisan nama sudah benar dan anggota aktif.'}).then(() => {window.history.back();});</script>";
+                echo "</body></html>";
+                exit;
+            }
+        } else {
+            $idAnggota = session()->get('idAgtKembali');
+        }
+
+        // Ambil transaksi berjalan anggota
+        $dataTransaksi = $modelPeminjaman->getDataPeminjaman([
+            'id_anggota' => $idAnggota,
+            'status_transaksi' => 'Berjalan'
+        ])->getRowArray();
+
+        if(!$dataTransaksi){
+            echo "<html><head><script src='https://cdn.jsdelivr.net/npm/sweetalert2@11'></script>\n<style>\n.swal2-popup { font-family: 'Segoe UI', 'Helvetica Neue', Arial, 'sans-serif'; color: #5f6468; }\n</style></head><body>";
+            echo "<script>Swal.fire({icon: 'info', title: 'Tidak Ada Transaksi Berjalan', text: 'Anggota ini tidak memiliki transaksi peminjaman yang perlu dikembalikan.'}).then(() => {window.history.back();});</script>";
+            echo "</body></html>";
+            exit;
+        }
+
+        $data['page'] = $page;
+        $data['web_title'] = "Transaksi Pengembalian";
+        $data['dataAnggota'] = $modelAnggota->getDataAnggota(['id_anggota' => $idAnggota])->getRowArray();
+        $data['dataTransaksi'] = $dataTransaksi;
+        $data['dataDetail'] = $modelPeminjaman->getDataDetail(['no_peminjaman' => $dataTransaksi['no_peminjaman']])->getResultArray();
+
+        echo view('Backend/Template/header', $data);
+        echo view('Backend/Template/sidebar', $data);
+        echo view('Backend/Transaksi/pengembalian-step-2', $data);
+        echo view('Backend/Template/footer', $data);
+    }
+
+    public function proses_pengembalian()
+    {
+        $modelPeminjaman = new M_Peminjaman;
+        $modelPengembalian = new M_Pengembalian;
+        $idAnggota = session()->get('idAgtKembali');
+        $idAdmin = session()->get('ses_id');
+        if(!$idAdmin) {
+            echo "<html><head><script src='https://cdn.jsdelivr.net/npm/sweetalert2@11'></script>\n<style>\n.swal2-popup { font-family: 'Segoe UI', 'Helvetica Neue', Arial, 'sans-serif'; color: #5f6468; }\n</style></head><body>";
+            echo "<script>Swal.fire({icon: 'error', title: 'Session Admin Tidak Ditemukan', text: 'Silakan login ulang sebagai admin.'}).then(() => {window.location='".base_url('admin/login-admin')."';});</script>";
+            echo "</body></html>";
+            exit;
+        }
+        $dataTransaksi = $modelPeminjaman->getDataPeminjaman([
+            'id_anggota' => $idAnggota,
+            'status_transaksi' => 'Berjalan'
+        ])->getRowArray();
+        if(!$dataTransaksi){
+            echo "<html><head><script src='https://cdn.jsdelivr.net/npm/sweetalert2@11'></script>\n<style>\n.swal2-popup { font-family: 'Segoe UI', 'Helvetica Neue', Arial, 'sans-serif'; color: #5f6468; }\n</style></head><body>";
+            echo "<script>Swal.fire({icon: 'info', title: 'Tidak Ada Transaksi Berjalan', text: 'Tidak ada transaksi yang bisa dikembalikan.'}).then(() => {window.location='".base_url('admin/pengembalian-step-1')."';});</script>";
+            echo "</body></html>";
+            exit;
+        }
+        // Ambil detail peminjaman untuk cek tgl_kembali
+        $dataDetail = $modelPeminjaman->getDataDetail(['no_peminjaman' => $dataTransaksi['no_peminjaman']])->getResultArray();
+        $tglHariIni = date('Y-m-d');
+        $denda = 0;
+        foreach ($dataDetail as $detail) {
+            if (strtotime($tglHariIni) > strtotime($detail['tgl_kembali'])) {
+                $denda = 10000;
+                break; // Jika salah satu buku telat, denda langsung 10.000
+            }
+        }
+        // Update status transaksi peminjaman
+        $modelPeminjaman->updateDataPeminjaman([
+            'status_transaksi' => 'Selesai'
+        ], [
+            'no_peminjaman' => $dataTransaksi['no_peminjaman']
+        ]);
+        // Simpan ke tabel pengembalian
+        $dataPengembalian = [
+            'no_pengembalian' => date('ymdHis'),
+            'no_peminjaman' => $dataTransaksi['no_peminjaman'],
+            'denda' => $denda,
+            'tgl_pengembalian' => $tglHariIni,
+            'id_admin' => $idAdmin
+        ];
+        $modelPengembalian->saveDataPengembalian($dataPengembalian);
+        session()->remove('idAgtKembali');
+        echo "<html><head><script src='https://cdn.jsdelivr.net/npm/sweetalert2@11'></script>\n<style>\n.swal2-popup { font-family: 'Segoe UI', 'Helvetica Neue', Arial, 'sans-serif'; color: #5f6468; }\n</style></head><body>";
+        echo "<script>Swal.fire({icon: 'success', title: 'Pengembalian Berhasil', text: 'Transaksi peminjaman telah diselesaikan.'}).then(() => {window.location='".base_url('admin/pengembalian-step-1')."';});</script>";
+        echo "</body></html>";
+        exit;
+    }
+
+    public function laporan_pengembalian()
+    {
+        $modelPengembalian = new \App\Models\M_Pengembalian();
+        $data['dataPengembalian'] = $modelPengembalian->getDataPengembalian()->getResultArray();
+        $data['web_title'] = 'Laporan Pengembalian';
+        echo view('Backend/Template/header', $data);
+        echo view('Backend/Template/sidebar', $data);
+        echo view('Backend/Laporan/laporan-pengembalian', $data);
+        echo view('Backend/Template/footer', $data);
+    }
 
 }

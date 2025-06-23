@@ -65,7 +65,18 @@ class Buku extends BaseController
         $e_book = $postData['e_book'];
         log_message('debug', 'Data POST berhasil diambil (langkah 4)');
     
-        $cekJudul = $modelBuku->getDataBuku(['judul_buku' => $judul_buku])->getNumRows();
+        // Cek duplikat kombinasi kategori & rak yang belum dihapus
+        $cekDuplikat = $modelBuku->getDataBuku([
+            'tbl_buku.id_kategori' => $id_kategori,
+            'tbl_buku.id_rak' => $id_rak,
+            'tbl_buku.is_delete_buku' => '0'
+        ])->getNumRows();
+        if($cekDuplikat > 0) {
+            session()->setFlashdata('error','Data buku dengan kategori dan rak yang sama sudah ada!');
+            return redirect()->back()->withInput();
+        }
+
+        $cekJudul = $modelBuku->getDataBuku(['tbl_buku.judul_buku' => $judul_buku, 'tbl_buku.is_delete_buku' => '0'])->getNumRows();
         log_message('debug', 'Hasil cek judul: ' . print_r($cekJudul, true) . ' (langkah 5)');
         if($cekJudul > 0) {
             session()->setFlashdata('error','Judul buku sudah ada!!');
@@ -145,7 +156,7 @@ class Buku extends BaseController
         $modelBuku = new M_Buku;
         $idUpdateRak = session()->get('idUpdateRak');
 
-        $dataBukuLama = $modelBuku->getDataBuku(['id_rak' => $idUpdateRak])->getRow();
+        $dataBukuLama = $modelBuku->getDataBuku(['tbl_buku.id_rak' => $idUpdateRak])->getRow();
 
         $judul_buku = $this->request->getPost('judul_buku');
         $pengarang = $this->request->getPost('pengarang');
@@ -191,7 +202,7 @@ class Buku extends BaseController
             'updated_at' => date("Y-m-d H:i:s")
         ];
 
-        $whereUpdate = ['id_rak' => $idUpdateRak];
+        $whereUpdate = ['tbl_buku.id_rak' => $idUpdateRak];
 
         $modelBuku->updateDataBuku($dataUpdate, $whereUpdate);
         session()->remove('idUpdateRak');

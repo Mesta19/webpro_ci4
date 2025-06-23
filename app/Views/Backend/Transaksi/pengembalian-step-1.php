@@ -3,7 +3,7 @@
         <ol class="breadcrumb">
             <li><a href="#"><span class="glyphicon glyphicon-home"></span></a></li>
             <li>Transaksi</li>
-            <li class="active">Peminjaman</li>
+            <li class="active">Pengembalian</li>
         </ol>
     </div><div class="row">
         <div class="col-md-12">
@@ -11,16 +11,15 @@
                 <div class="panel-body">
                     <h3>Input Anggota</h3>
                     <hr />
-                    <form action="<?php echo base_url('admin/peminjaman-step-2'); ?>" method="post">
+                    <form action="<?php echo base_url('admin/pengembalian-step-2'); ?>" method="post">
                         <div class="form-group col-md-6">
                             <label>Nama Anggota</label>
                             <input type="text" class="form-control" name="nama_anggota" placeholder="Masukkan Nama Anggota" required="required">
                         </div>
                         <div style="clear:both;"></div>
-
                         <div class="form-group col-md-6">
                             <button type="submit" class="btn btn-primary">Next</button>
-                            <a href="<?php echo base_url('admin/peminjaman-step-1'); ?>" type="button" class="btn btn-danger">Batal</a>
+                            <a href="<?php echo base_url('admin/pengembalian-step-1'); ?>" type="button" class="btn btn-danger">Batal</a>
                         </div>
                         <div style="clear:both;"></div>
                     </form>

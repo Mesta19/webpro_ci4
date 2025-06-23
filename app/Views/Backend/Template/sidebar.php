@@ -35,7 +35,7 @@
                 <li><a href="<?= base_url('/admin/peminjaman-step-1'); ?>">
                     <span class="glyphicon glyphicon-import"></span> Peminjaman
                 </a></li>
-                <li><a href="<?= base_url('pengembalian'); ?>">
+                <li><a href="<?= base_url('/admin/pengembalian-step-1'); ?>">
                     <span class="glyphicon glyphicon-export"></span> Pengembalian
                 </a></li>
             </ul>
@@ -43,13 +43,13 @@
 
         <li class="parent">
             <a href="#">
-                <span class="glyphicon glyphicon-stats"></span> Laporan 
+                <span class="glyphicon glyphicon-stats"></span> Laporan
                 <span data-toggle="collapse" href="#sub-laporan" class="icon pull-right">
                     <em class="glyphicon glyphicon-plus"></em>
                 </span>
             </a>
             <ul class="children collapse" id="sub-laporan">
-                <li><a href="<?= base_url('laporan/peminjaman'); ?>">
+                <li><a href="<?= base_url('admin/data-transaksi-peminjaman'); ?>">
                     <span class="glyphicon glyphicon-list-alt"></span> Laporan Peminjaman
                 </a></li>
                 <li><a href="<?= base_url('laporan/pengembalian'); ?>">
